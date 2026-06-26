@@ -26,7 +26,7 @@ export function ConnectScreen({ onConnected }: { onConnected: (a: AccountInfo) =
           {busy === 'gmail' ? 'Connecting…' : 'Connect Gmail'}
         </button>
         <button className="btn provider-ms" disabled={!!busy} onClick={() => connect('outlook')}>
-          {busy === 'outlook' ? 'Connecting…' : 'Connect Hotmail'}
+          {busy === 'outlook' ? 'Connecting…' : 'Connect Outlook / Hotmail'}
         </button>
       </div>
       {error && <p className="error">{error}</p>}

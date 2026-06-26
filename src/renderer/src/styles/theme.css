@@ -246,7 +246,7 @@ body {
 }
 .connect h1 { font-size: 26px; font-weight: 600; }
 .connect p { font-size: 14px; color: var(--muted); max-width: 320px; }
-.connect-btns { display: flex; flex-direction: column; gap: 10px; width: 220px; }
+.connect-btns { display: flex; flex-direction: column; gap: 10px; width: 260px; }
 .connect-btns .btn { padding: 11px 24px; font-size: 14px; width: 100%; }
 .btn.provider-ms { background: #0a84ff; color: #fff; border-color: #0a84ff; }
 .btn.provider-ms:hover { background: #0070e0; }
