@@ -1,0 +1,7 @@
+node_modules
+dist
+out
+resources/google-credentials.json
+resources/microsoft-credentials.json
+*.sqlite
+docs/

@@ -1,0 +1,94 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' ws://localhost:* http://localhost:*"
+    />
+    <title>Inbox Cleaner</title>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      html, body { height: 100%; overflow: hidden; }
+      body {
+        font-family: "Segoe UI Variable", "Segoe UI", sans-serif;
+        color: #1b1b1f;
+        background: linear-gradient(160deg, #dcdde4, #eceef3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        user-select: none;
+        -webkit-app-region: drag;
+        border: 1px solid #c7c9d4;
+        border-radius: 10px;
+      }
+      .splash {
+        width: 100%;
+        padding: 30px 34px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+      }
+      .logo {
+        width: 60px;
+        height: 60px;
+        border-radius: 16px;
+        background: linear-gradient(135deg, #3b9dff, #0067c0);
+        display: grid;
+        place-items: center;
+        box-shadow: 0 8px 22px rgba(0, 103, 192, 0.32);
+      }
+      .logo svg { width: 34px; height: 34px; }
+      .brand { font-size: 19px; font-weight: 600; letter-spacing: 0.2px; color: #1b1b1f; }
+      .status { font-size: 13px; color: #5f5f66; min-height: 18px; }
+      .track {
+        width: 230px;
+        height: 6px;
+        background: #cdced8;
+        border-radius: 999px;
+        overflow: hidden;
+        position: relative;
+      }
+      .fill {
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100%;
+        width: 0%;
+        border-radius: 999px;
+        background: linear-gradient(90deg, #3b9dff, #0067c0);
+        transition: width 0.2s ease;
+      }
+      .track.indeterminate .fill {
+        width: 38% !important;
+        animation: sweep 1.1s ease-in-out infinite;
+      }
+      @keyframes sweep {
+        0% { left: -38%; }
+        100% { left: 100%; }
+      }
+      .detail {
+        font-size: 11px;
+        color: #84848d;
+        min-height: 14px;
+        font-variant-numeric: tabular-nums;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="splash">
+      <div class="logo">
+        <svg viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="40" y="64" width="176" height="128" rx="16" stroke="#ffffff" stroke-width="16" />
+          <path d="M48 78 L128 146 L208 78" stroke="#ffffff" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </div>
+      <div class="brand">Inbox Cleaner</div>
+      <div id="status" class="status">Starting…</div>
+      <div id="track" class="track indeterminate"><div id="fill" class="fill"></div></div>
+      <div id="detail" class="detail"></div>
+    </div>
+    <script type="module" src="/src/splash.ts"></script>
+  </body>
+</html>

@@ -1,0 +1,28 @@
+appId: com.inboxcleaner.app
+productName: Inbox Cleaner
+directories:
+  output: dist
+  buildResources: build
+files:
+  - out/**
+  - package.json
+extraResources:
+  - from: resources/google-credentials.json
+    to: google-credentials.json
+  - from: resources/microsoft-credentials.json
+    to: microsoft-credentials.json
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  artifactName: ${productName}-Setup-${version}.${ext}
+nsis:
+  oneClick: true
+  perMachine: false
+  allowToChangeInstallationDirectory: false
+  deleteAppDataOnUninstall: false
+publish:
+  provider: github
+  owner: TyrantKDN
+  repo: InboxCleaner
