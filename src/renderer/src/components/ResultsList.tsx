@@ -69,6 +69,10 @@ export function ResultsList({
 
   const setRow = (email: string, v: RowState): void =>
     setRows((r) => ({ ...r, [email]: { ...r[email], ...v } }))
+  const flashNote = (email: string, note: string): void => {
+    setRow(email, { busy: false, note })
+    setTimeout(() => setRow(email, { note: undefined }), 4000)
+  }
   const removeSender = (email: string): void => {
     setScan((prev) => (prev ? { ...prev, senders: prev.senders.filter((s) => s.fromEmail !== email) } : prev))
     setSelected((prev) => {
@@ -91,9 +95,9 @@ export function ResultsList({
             : r.method === 'opened-mail'
               ? 'Opened email'
               : 'No option'
-      setRow(sender.fromEmail, { busy: false, note })
+      flashNote(sender.fromEmail, note)
     } catch (e) {
-      setRow(sender.fromEmail, { busy: false, note: 'Failed' })
+      flashNote(sender.fromEmail, 'Failed')
       setToast(`Unsubscribe failed: ${errMsg(e)}`)
     }
   }
@@ -166,22 +170,36 @@ export function ResultsList({
     }
     setBulkBusy(true)
     setBulkProgress({ done: 0, total: targets.length })
-    let ok = 0
+    let unsubbed = 0
+    let opened = 0
     let fail = 0
+    let done = 0
     for (const s of targets) {
       try {
-        await api.unsubscribe(s.unsubscribe!)
-        setRow(s.fromEmail, { note: 'Unsubscribed' })
-        ok++
+        const r = await api.unsubscribe(s.unsubscribe!)
+        if (r.method === 'one-click') {
+          flashNote(s.fromEmail, 'Unsubscribed')
+          unsubbed++
+        } else if (r.method === 'opened-page' || r.method === 'opened-mail') {
+          flashNote(s.fromEmail, r.method === 'opened-page' ? 'Opened page' : 'Opened email')
+          opened++
+        } else {
+          flashNote(s.fromEmail, 'No option')
+        }
       } catch {
+        flashNote(s.fromEmail, 'Failed')
         fail++
       }
-      setBulkProgress({ done: ok + fail, total: targets.length })
+      done++
+      setBulkProgress({ done, total: targets.length })
     }
     setBulkBusy(false)
     setBulkProgress(null)
     setSelected(new Set())
-    setToast(`Unsubscribed from ${ok}${fail ? `, ${fail} failed` : ''}`)
+    const parts = [`Unsubscribed from ${unsubbed}`]
+    if (opened) parts.push(`opened ${opened}`)
+    if (fail) parts.push(`${fail} failed`)
+    setToast(parts.join(', '))
   }
 
   const senders = scan?.senders ?? []
@@ -302,7 +320,7 @@ export function ResultsList({
         </div>
       )}
 
-      {selected.size > 0 && !busy && (
+      {(bulkBusy || selected.size > 0) && !busy && (
         <div className="bulkbar">
           <b>{plural(selected.size, 'sender')} selected</b> · {selectedEmailCount.toLocaleString()} emails
           {bulkProgress && (

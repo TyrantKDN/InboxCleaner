@@ -1,15 +1,24 @@
 import { google } from 'googleapis'
 import type { OAuth2Client } from 'google-auth-library'
 
+function isAlreadyExists(err: unknown): boolean {
+  const e = err as { status?: number; code?: number | string; message?: string }
+  return e?.status === 409 || e?.code === 409 || /already exists/i.test(e?.message ?? '')
+}
+
 export async function blockSender(auth: OAuth2Client, email: string): Promise<void> {
   const gmail = google.gmail({ version: 'v1', auth })
-  await gmail.users.settings.filters.create({
-    userId: 'me',
-    requestBody: {
-      criteria: { from: email },
-      action: { removeLabelIds: ['INBOX', 'UNREAD'] },
-    },
-  })
+  try {
+    await gmail.users.settings.filters.create({
+      userId: 'me',
+      requestBody: {
+        criteria: { from: email },
+        action: { removeLabelIds: ['INBOX', 'UNREAD'] },
+      },
+    })
+  } catch (err) {
+    if (!isAlreadyExists(err)) throw err
+  }
 }
 
 export async function deleteFromSender(auth: OAuth2Client, email: string): Promise<number> {
