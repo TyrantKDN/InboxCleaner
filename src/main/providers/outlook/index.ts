@@ -1,3 +1,4 @@
+import { InteractionRequiredAuthError } from '@azure/msal-node'
 import type { AccountInfo, PublicClientApplication } from '@azure/msal-node'
 import type { MailProvider } from '../types'
 import type { ScanResult, UnsubInfo, UnsubResult } from '../../scan/types'
@@ -30,12 +31,20 @@ export class OutlookProvider implements MailProvider {
 
   private async token(): Promise<string> {
     if (!this.pca || !this.account) throw new Error('Not connected')
-    const res = await this.pca.acquireTokenSilent({ account: this.account, scopes: SCOPES })
-    saveSession({
-      provider: 'outlook',
-      account: this.account.username,
-      data: this.pca.getTokenCache().serialize(),
-    })
+    try {
+      return await this.acquireAndPersist(this.pca, this.account)
+    } catch (e) {
+      if (!(e instanceof InteractionRequiredAuthError)) throw e
+      const { pca, account } = await connectOutlook()
+      this.pca = pca
+      this.account = account
+      return this.acquireAndPersist(pca, account)
+    }
+  }
+
+  private async acquireAndPersist(pca: PublicClientApplication, account: AccountInfo): Promise<string> {
+    const res = await pca.acquireTokenSilent({ account, scopes: SCOPES })
+    saveSession({ provider: 'outlook', account: account.username, data: pca.getTokenCache().serialize() })
     return res.accessToken
   }
 

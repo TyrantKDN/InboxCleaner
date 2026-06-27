@@ -1,6 +1,6 @@
 {
   "name": "inbox-cleaner",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Find and clean up junk email senders",
   "main": "./out/main/index.js",
   "author": {

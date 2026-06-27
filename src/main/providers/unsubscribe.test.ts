@@ -1,19 +1,24 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { shell } from 'electron'
+import { lookup } from 'node:dns/promises'
 import { unsubscribe } from './unsubscribe'
 
 vi.mock('electron', () => ({ shell: { openExternal: vi.fn() } }))
+vi.mock('node:dns/promises', () => ({ lookup: vi.fn() }))
 
 const openExternal = shell.openExternal as unknown as ReturnType<typeof vi.fn>
+const mockLookup = lookup as unknown as ReturnType<typeof vi.fn>
 
 describe('unsubscribe', () => {
   beforeEach(() => {
     openExternal.mockReset()
     openExternal.mockResolvedValue(undefined)
+    mockLookup.mockReset()
+    mockLookup.mockResolvedValue([{ address: '93.184.216.34', family: 4 }])
     vi.stubGlobal('fetch', vi.fn())
   })
 
-  it('reports one-click success when an https endpoint returns ok', async () => {
+  it('reports one-click success when a public https endpoint returns ok', async () => {
     ;(fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ ok: true })
     const r = await unsubscribe({ oneClick: true, url: 'https://example.com/u' })
     expect(r.method).toBe('one-click')
@@ -29,6 +34,13 @@ describe('unsubscribe', () => {
 
   it('does not POST to a non-https one-click url', async () => {
     const r = await unsubscribe({ oneClick: true, url: 'http://example.com/u' })
+    expect(fetch).not.toHaveBeenCalled()
+    expect(r.method).toBe('opened-page')
+  })
+
+  it('does not POST when the host resolves to a private address', async () => {
+    mockLookup.mockResolvedValueOnce([{ address: '127.0.0.1', family: 4 }])
+    const r = await unsubscribe({ oneClick: true, url: 'https://internal.evil.test/u' })
     expect(fetch).not.toHaveBeenCalled()
     expect(r.method).toBe('opened-page')
   })

@@ -17,19 +17,31 @@ function requireActive(): MailProvider {
   return active
 }
 
+function requireProvider(id: unknown): MailProvider {
+  if (id !== 'gmail' && id !== 'outlook') throw new Error(`Unknown provider: ${String(id)}`)
+  return providers[id]
+}
+
+function requireEmail(email: unknown): string {
+  if (typeof email !== 'string' || !email.includes('@')) throw new Error('Invalid email address')
+  return email
+}
+
 export function registerIpc(now: () => number): void {
   ipcMain.handle('account:connect', async (_e, providerId: ProviderId) => {
-    const account = await providers[providerId].connect()
-    active = providers[providerId]
+    const provider = requireProvider(providerId)
+    const account = await provider.connect()
+    active = provider
     return { provider: providerId, account }
   })
 
   ipcMain.handle('account:restore', async () => {
     const saved = loadSession()
     if (!saved) return null
-    const account = await providers[saved.provider].restore()
+    const provider = requireProvider(saved.provider)
+    const account = await provider.restore()
     if (!account) return null
-    active = providers[saved.provider]
+    active = provider
     return { provider: saved.provider, account }
   })
 
@@ -49,6 +61,10 @@ export function registerIpc(now: () => number): void {
   ipcMain.handle('action:unsubscribe', async (_e, info: UnsubInfo) =>
     requireActive().unsubscribe(info),
   )
-  ipcMain.handle('action:block', async (_e, email: string) => requireActive().block(email))
-  ipcMain.handle('action:delete', async (_e, email: string) => requireActive().deleteSender(email))
+  ipcMain.handle('action:block', async (_e, email: string) =>
+    requireActive().block(requireEmail(email)),
+  )
+  ipcMain.handle('action:delete', async (_e, email: string) =>
+    requireActive().deleteSender(requireEmail(email)),
+  )
 }

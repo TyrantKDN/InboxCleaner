@@ -19,6 +19,31 @@ function headerValue(
   return headers.find((h) => h.name?.toLowerCase() === lower)?.value ?? undefined
 }
 
+function statusOf(err: unknown): number | undefined {
+  const e = err as { status?: number; code?: number }
+  if (typeof e?.status === 'number') return e.status
+  if (typeof e?.code === 'number') return e.code
+  return undefined
+}
+
+function isTransient(err: unknown): boolean {
+  const s = statusOf(err)
+  return s === 429 || (typeof s === 'number' && s >= 500 && s < 600)
+}
+
+async function withRetry<T>(fn: () => Promise<T>, attempts = 4): Promise<T> {
+  let delay = 500
+  for (let i = 0; ; i++) {
+    try {
+      return await fn()
+    } catch (err) {
+      if (!isTransient(err) || i >= attempts - 1) throw err
+      await new Promise((resolve) => setTimeout(resolve, delay))
+      delay *= 2
+    }
+  }
+}
+
 export async function fetchHeaders(
   auth: OAuth2Client,
   max = 500,
@@ -38,32 +63,34 @@ export async function fetchHeaders(
     }
     const ids = (list.data.messages ?? []).map((m) => m.id!).filter(Boolean)
     for (const id of ids) {
+      let msg
       try {
-        const msg = await gmail.users.messages.get({
-          userId: 'me', id, format: 'metadata', metadataHeaders: HEADERS,
-        })
-        const labels = (msg.data.labelIds ?? []).map((l) => l.toLowerCase())
-        if (labels.includes('trash')) continue
-        const headers = msg.data.payload?.headers ?? []
-        const from = headerValue(headers, 'From') ?? 'unknown'
-        const { name, email } = parseFrom(from)
-        const unsubscribe = parseUnsub(
-          headerValue(headers, 'List-Unsubscribe'),
-          headerValue(headers, 'List-Unsubscribe-Post'),
+        msg = await withRetry(() =>
+          gmail.users.messages.get({ userId: 'me', id, format: 'metadata', metadataHeaders: HEADERS }),
         )
-        out.push({
-          id,
-          fromName: name,
-          fromEmail: email,
-          hasListUnsubscribe: !!unsubscribe,
-          unsubscribe,
-          labels,
-          isRead: !labels.includes('unread'),
-        })
-        onProgress?.(out.length, total)
-      } catch {
+      } catch (err) {
+        if (isTransient(err)) throw err
         continue
       }
+      const labels = (msg.data.labelIds ?? []).map((l) => l.toLowerCase())
+      if (labels.includes('trash')) continue
+      const headers = msg.data.payload?.headers ?? []
+      const from = headerValue(headers, 'From') ?? 'unknown'
+      const { name, email } = parseFrom(from)
+      const unsubscribe = parseUnsub(
+        headerValue(headers, 'List-Unsubscribe'),
+        headerValue(headers, 'List-Unsubscribe-Post'),
+      )
+      out.push({
+        id,
+        fromName: name,
+        fromEmail: email,
+        hasListUnsubscribe: !!unsubscribe,
+        unsubscribe,
+        labels,
+        isRead: !labels.includes('unread'),
+      })
+      onProgress?.(out.length, total)
     }
     pageToken = list.data.nextPageToken ?? undefined
     if (!pageToken) break
